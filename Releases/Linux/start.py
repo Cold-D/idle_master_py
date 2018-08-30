@@ -24,7 +24,7 @@ def pause():
 
 os.chdir(os.path.abspath(os.path.dirname(sys.argv[0])))
 
-logging.basicConfig(filename="idlemaster.log",filemode="w",format="[ %(asctime)s ] %(message)s", datefmt="%m/%d/%Y %I:%M:%S %p",level=logging.DEBUG)
+logging.basicConfig(filename="idlemaster.log", filemode="w", format="[ %(asctime)s ] %(message)s", datefmt="%m/%d/%Y %I:%M:%S %p", level=logging.DEBUG)
 console = logging.StreamHandler()
 console.setLevel(logging.WARNING)
 console.setFormatter(logging.Formatter("[ %(asctime)s ] %(message)s", "%m/%d/%Y %I:%M:%S %p"))
@@ -60,10 +60,10 @@ def generateCookies():
 	global authData
 	try:
 		cookies = dict(
-			sessionid=authData["sessionid"],
-			steamRememberLogin=authData["steamRememberLogin"],
-			steamLoginSecure=authData["steamLoginSecure"],
-			steamparental=authData["steamparental"]
+			sessionid = authData["sessionid"],
+			steamRememberLogin = authData["steamRememberLogin"],
+			steamLoginSecure = authData["steamLoginSecure"],
+			steamparental = authData["steamparental"]
 		)
 	except:
 		logging.warning(Fore.RED + "Error setting cookies" + Fore.RESET)
@@ -73,7 +73,7 @@ def generateCookies():
 	return cookies
 
 def dropDelay(numDrops):
-	if numDrops>1:
+	if numDrops > 1:
 		baseDelay = (15*60)
 	else:
 		baseDelay = (5*60)
@@ -88,11 +88,11 @@ def idleOpen(appID):
 		idle_time = time.time()
 
 		if sys.platform.startswith('win32'):
-			process_idle = subprocess.Popen("steam-idle.exe "+str(appID))
+			process_idle = subprocess.Popen("steam-idle.exe " + str(appID))
 		elif sys.platform.startswith('darwin'):
 			process_idle = subprocess.Popen(["./steam-idle", str(appID)])
 		elif sys.platform.startswith('linux'):
-			process_idle = subprocess.Popen(["python2", "steam-idle.py", str(appID)])
+			process_idle = subprocess.Popen(["python", "steam-idle.py", str(appID)])
 	except:
 		logging.warning(Fore.RED + "Error launching steam-idle with game ID " + str(appID) + Fore.RESET)
 		pause()
@@ -110,14 +110,14 @@ def idleClose(appID):
 		sys.exit()
 
 def chillOut(appID):
-	logging.warning("Suspending operation for "+getAppName(appID))
+	logging.warning("Suspending operation for " + getAppName(appID))
 	idleClose(appID)
 	stillDown = True
 	while stillDown:
 		logging.warning("Sleeping for 5 minutes.")
 		time.sleep(5*60)
 		try:
-			rBadge = requests.get(myProfileURL+"/gamecards/" + str(appID) + "/",cookies=cookies)
+			rBadge = requests.get("{}/gamecards/{}/".format(myProfileURL, str(appID)), cookies=cookies)
 			indBadgeData = bs4.BeautifulSoup(rBadge.text, 'lxml')
 			badgeLeftString = indBadgeData.find_all("span",{"class": "progress_info_bold"})[0].contents[0]
 			if "card drops" in badgeLeftString:
@@ -131,17 +131,17 @@ def getAppName(appID):
 	try:
 		api = requests.get("https://store.steampowered.com/api/appdetails/?appids=" + str(appID) + "&filters=basic")
 		api_data = json.loads(api.text)
-		return Fore.CYAN + api_data[str(appID)]["data"]["name"].encode('ascii', 'ignore') + Fore.RESET
+		return Fore.CYAN + api_data[str(appID)]["data"]["name"] + Fore.RESET
 	except:
-		return Fore.CYAN + "App "+str(appID) + Fore.RESET
+		return Fore.CYAN + "App " + str(appID) + Fore.RESET
 
 def getPlainAppName(appid):
 	try:
 		api = requests.get("https://store.steampowered.com/api/appdetails/?appids=" + str(appID) + "&filters=basic")
 		api_data = json.loads(api.text)
-		return api_data[str(appID)]["data"]["name"].encode('ascii', 'ignore')
+		return api_data[str(appID)]["data"]["name"]
 	except:
-		return "App "+str(appID)
+		return "App " + str(appID)
 
 def get_blacklist():
 	try:
@@ -160,7 +160,7 @@ logging.warning("Finding games that have card drops remaining")
 
 try:
 	cookies = generateCookies()
-	r = requests.get(myProfileURL+"/badges/",cookies=cookies)
+	r = requests.get(myProfileURL + "/badges/", cookies=cookies)
 except:
 	logging.warning(Fore.RED + "Error reading badge page" + Fore.RESET)
 	pause()
@@ -182,7 +182,7 @@ try:
 		logging.warning(str(badgePages) + " badge pages found.  Gathering additional data")
 		currentpage = 2
 		while currentpage <= badgePages:
-			r = requests.get(myProfileURL+"/badges/?p="+str(currentpage),cookies=cookies)
+			r = requests.get(myProfileURL+"/badges/?p=" + str(currentpage),cookies=cookies)
 			badgePageData = bs4.BeautifulSoup(r.text, 'lxml')
 			badgeSet = badgeSet + badgePageData.find_all("div",{"class": "badge_title_stats"})
 			currentpage = currentpage + 1
@@ -197,7 +197,7 @@ if not userinfo:
 
 blacklist = get_blacklist()
 
-if authData["sort"]=="mostvalue" or authData["sort"]=="leastvalue":
+if authData["sort"] == "mostvalue" or authData["sort"] == "leastvalue":
 	logging.warning("Getting card values, please wait...")
 
 for badge in badgeSet:
@@ -211,16 +211,16 @@ for badge in badgeSet:
 			continue
 		else:
 			# Remaining drops
-			dropCountInt, junk = dropCount.split(" ",1)
+			dropCountInt, junk = dropCount.split(" ", 1)
 			dropCountInt = int(dropCountInt)
 			linkGuess = badge.find_parent().find_parent().find_parent().find_all("a")[0]["href"]
-			junk, badgeId = linkGuess.split("/gamecards/",1)
-			badgeId = int(badgeId.replace("/",""))
+			junk, badgeId = linkGuess.split("/gamecards/", 1)
+			badgeId = int(badgeId.replace("/", ""))
 			if badgeId in blacklist:
 				logging.warning(getAppName(badgeId) + " on blacklist, skipping game")
 				continue
 			else:
-				if authData["sort"]=="mostvalue" or authData["sort"]=="leastvalue":
+				if authData["sort"] == "mostvalue" or authData["sort"] == "leastvalue":
 					gameValue = requests.get("https://api.enhancedsteam.com/market_data/average_card_price/?appid=" + str(badgeId) + "&cur=usd")
 					push = [badgeId, dropCountInt, float(str(gameValue.text))]
 					badgesLeft.append(push)
@@ -233,20 +233,20 @@ for badge in badgeSet:
 logging.warning("Idle Master needs to idle " + Fore.GREEN + str(len(badgesLeft)) + Fore.RESET + " games")
 
 def getKey(item):
-	if authData["sort"]=="mostcards" or authData["sort"]=="leastcards":
+	if authData["sort"] == "mostcards" or authData["sort"] == "leastcards":
 		return item[1]
-	elif authData["sort"]=="mostvalue" or authData["sort"]=="leastvalue":
+	elif authData["sort"] == "mostvalue" or authData["sort" ]== "leastvalue":
 		return item[2]
 	else:
 		return item[0]
 
 sortValues = ["", "mostcards", "leastcards", "mostvalue", "leastvalue"]
 if authData["sort"] in sortValues:
-	if authData["sort"]=="":
+	if authData["sort"] == "":
 		games = badgesLeft
-	if authData["sort"]=="mostcards" or authData["sort"]=="mostvalue":
+	if authData["sort"] == "mostcards" or authData["sort"] == "mostvalue":
 		games = sorted(badgesLeft, key=getKey, reverse=True)
-	if authData["sort"]=="leastcards" or authData["sort"]=="leastvalue":
+	if authData["sort"] == "leastcards" or authData["sort"] == "leastvalue":
 		games = sorted(badgesLeft, key=getKey, reverse=False)
 else:
 	logging.warning(Fore.RED + "Invalid sort value" + Fore.RESET)
@@ -255,9 +255,9 @@ else:
 
 for appID, drops, value in games:
 	delay = dropDelay(int(drops))
-	stillHaveDrops=1
-	numCycles=50
-	maxFail=2
+	stillHaveDrops = 1
+	numCycles = 50
+	maxFail = 2
 
 	idleOpen(appID)
 
@@ -266,28 +266,28 @@ for appID, drops, value in games:
 	if sys.platform.startswith('win32'):
 		ctypes.windll.kernel32.SetConsoleTitleA("Idle Master - Idling " + getPlainAppName(appID) + " [" + str(drops) + " remaining]")
 
-	while stillHaveDrops==1:
+	while stillHaveDrops == 1:
 		try:
 			logging.warning("Sleeping for " + str(delay / 60) + " minutes")
 			time.sleep(delay)
-			numCycles-=1
-			if numCycles<1: # Sanity check against infinite loop
-				stillHaveDrops=0
+			numCycles -= 1
+			if numCycles < 1: # Sanity check against infinite loop
+				stillHaveDrops = 0
 
 			logging.warning("Checking to see if " + getAppName(appID) + " has remaining card drops")
-			rBadge = requests.get(myProfileURL + "/gamecards/" + str(appID) + "/",cookies=cookies)
+			rBadge = requests.get("{}/gamecards/{}/".format(myProfileURL, str(appID)), cookies=cookies)
 			indBadgeData = bs4.BeautifulSoup(rBadge.text, 'lxml')
 			badgeLeftString = indBadgeData.find_all("span",{"class": "progress_info_bold"})[0].contents[0]
 			if "No card drops" in badgeLeftString:
 				logging.warning("No card drops remaining")
-				stillHaveDrops=0
+				stillHaveDrops = 0
 			else:
-				dropCountInt, junk = badgeLeftString.split(" ",1)
+				dropCountInt, junk = badgeLeftString.split(" ", 1)
 				dropCountInt = int(dropCountInt)
 				delay = dropDelay(dropCountInt)
 				logging.warning(getAppName(appID) + " has " + str(dropCountInt) + " card drops remaining")
 				if sys.platform.startswith('win32'):
-					ctypes.windll.kernel32.SetConsoleTitleA("Idle Master - Idling " + getPlainAppName(appID) + " [" + str(dropCountInt) + " remaining]")
+					ctypes.windll.kernel32.SetConsoleTitleA("Idle Master - Idling {} [{} remaining]".format(getPlainAppName(appID), str(dropCountInt)))
 		except:
 			if maxFail>0:
 				logging.warning("Error checking if drops are done, number of tries remaining: " + str(maxFail))
