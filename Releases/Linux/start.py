@@ -25,33 +25,34 @@ if sys.platform.startswith('win32'):
 	ctypes.windll.kernel32.SetConsoleTitleA("Idle Master")
 
 logging.warning(Fore.GREEN + "WELCOME TO IDLE MASTER" + Fore.RESET)
-
 try:
-	authData={}
-	authData["sort"]=""
-	authData["steamparental"]=""
-	authData["hasPlayTime"]="false"
-	execfile("./settings.txt",authData)
-	myProfileURL = "http://steamcommunity.com/profiles/"+authData["steamLogin"][:17]
+	authData = {}
+	authData["sort"] = ""
+	authData["steamparental"] = ""
+	authData["hasPlayTime"] = "false"
+	execfile("./settings.py", authData)
+	myProfileURL = "https://steamcommunity.com/id/" + authData["steamId"]
 except:
 	logging.warning(Fore.RED + "Error loading config file" + Fore.RESET)
 	raw_input("Press Enter to continue...")
 	sys.exit()
-	
-if not authData["sessionid"]:
-	logging.warning(Fore.RED + "No sessionid set" + Fore.RESET)
-	raw_input("Press Enter to continue...")
-	sys.exit()
-	
-if not authData["steamLogin"]:
-	logging.warning(Fore.RED + "No steamLogin set" + Fore.RESET)
-	raw_input("Press Enter to continue...")
-	sys.exit()
+
+mandatoryData = ["sessionid", "steamRememberLogin", "steamLoginSecure"]
+for item in mandatoryData:
+	if not authData[item]:
+		logging.warning(Fore.RED + "No " + item + " set" + Fore.RESET)
+		raw_input("Press Enter to continue...")
+		sys.exit()
 
 def generateCookies():
 	global authData
 	try:
-		cookies = dict(sessionid=authData["sessionid"], steamLogin=authData["steamLogin"], steamparental=authData["steamparental"])
+		cookies = dict(
+			sessionid=authData["sessionid"],
+			steamRememberLogin=authData["steamRememberLogin"],
+			steamLoginSecure=authData["steamLoginSecure"],
+			steamparental=authData["steamparental"]
+		)
 	except:
 		logging.warning(Fore.RED + "Error setting cookies" + Fore.RESET)
 		raw_input("Press Enter to continue...")
@@ -65,7 +66,7 @@ def dropDelay(numDrops):
 	else:
 		baseDelay = (5*60)
 	return baseDelay
-	
+
 def idleOpen(appID):
 	try:
 		logging.warning("Starting game " + getAppName(appID) + " to idle cards")
@@ -105,7 +106,7 @@ def chillOut(appID):
 		time.sleep(5*60)
 		try:
 			rBadge = requests.get(myProfileURL+"/gamecards/" + str(appID) + "/",cookies=cookies)
-			indBadgeData = bs4.BeautifulSoup(rBadge.text)
+			indBadgeData = bs4.BeautifulSoup(rBadge.text, 'lxml')
 			badgeLeftString = indBadgeData.find_all("span",{"class": "progress_info_bold"})[0].contents[0]
 			if "card drops" in badgeLeftString:
 				stillDown = False
@@ -113,10 +114,10 @@ def chillOut(appID):
 			logging.warning("Still unable to find drop info.")
 	# Resume operations.
 	idleOpen(appID)
-	
+
 def getAppName(appID):
 	try:
-		api = requests.get("http://store.steampowered.com/api/appdetails/?appids=" + str(appID) + "&filters=basic")
+		api = requests.get("https://store.steampowered.com/api/appdetails/?appids=" + str(appID) + "&filters=basic")
 		api_data = json.loads(api.text)
 		return Fore.CYAN + api_data[str(appID)]["data"]["name"].encode('ascii', 'ignore') + Fore.RESET
 	except:
@@ -124,7 +125,7 @@ def getAppName(appID):
 
 def getPlainAppName(appid):
 	try:
-		api = requests.get("http://store.steampowered.com/api/appdetails/?appids=" + str(appID) + "&filters=basic")
+		api = requests.get("https://store.steampowered.com/api/appdetails/?appids=" + str(appID) + "&filters=basic")
 		api_data = json.loads(api.text)
 		return api_data[str(appID)]["data"]["name"].encode('ascii', 'ignore')
 	except:
@@ -155,7 +156,7 @@ except:
 
 try:
 	badgesLeft = []
-	badgePageData = bs4.BeautifulSoup(r.text)
+	badgePageData = bs4.BeautifulSoup(r.text, 'lxml')
 	badgeSet = badgePageData.find_all("div",{"class": "badge_title_stats"})
 except:
 	logging.warning(Fore.RED + "Error finding drop info" + Fore.RESET)
@@ -170,7 +171,7 @@ try:
 		currentpage = 2
 		while currentpage <= badgePages:
 			r = requests.get(myProfileURL+"/badges/?p="+str(currentpage),cookies=cookies)
-			badgePageData = bs4.BeautifulSoup(r.text)
+			badgePageData = bs4.BeautifulSoup(r.text, 'lxml')
 			badgeSet = badgeSet + badgePageData.find_all("div",{"class": "badge_title_stats"})
 			currentpage = currentpage + 1
 except:
@@ -193,7 +194,7 @@ for badge in badgeSet:
 		badge_text = badge.get_text()
 		dropCount = badge.find_all("span",{"class": "progress_info_bold"})[0].contents[0]
 		has_playtime = re.search("[0-9\.] hrs on record", badge_text) != None
-        
+
 		if "No card drops" in dropCount or (has_playtime == False and authData["hasPlayTime"].lower() == "true") :
 			continue
 		else:
@@ -208,7 +209,7 @@ for badge in badgeSet:
 				continue
 			else:
 				if authData["sort"]=="mostvalue" or authData["sort"]=="leastvalue":
-					gameValue = requests.get("http://api.enhancedsteam.com/market_data/average_card_price/?appid=" + str(badgeId) + "&cur=usd")
+					gameValue = requests.get("https://api.enhancedsteam.com/market_data/average_card_price/?appid=" + str(badgeId) + "&cur=usd")
 					push = [badgeId, dropCountInt, float(str(gameValue.text))]
 					badgesLeft.append(push)
 				else:
@@ -245,7 +246,7 @@ for appID, drops, value in games:
 	stillHaveDrops=1
 	numCycles=50
 	maxFail=2
-	
+
 	idleOpen(appID)
 
 	logging.warning(getAppName(appID) + " has " + str(drops) + " card drops remaining")
@@ -263,7 +264,7 @@ for appID, drops, value in games:
 
 			logging.warning("Checking to see if " + getAppName(appID) + " has remaining card drops")
 			rBadge = requests.get(myProfileURL + "/gamecards/" + str(appID) + "/",cookies=cookies)
-			indBadgeData = bs4.BeautifulSoup(rBadge.text)
+			indBadgeData = bs4.BeautifulSoup(rBadge.text, 'lxml')
 			badgeLeftString = indBadgeData.find_all("span",{"class": "progress_info_bold"})[0].contents[0]
 			if "No card drops" in badgeLeftString:
 				logging.warning("No card drops remaining")
