@@ -1,5 +1,8 @@
+try:
+	import cookielib
+except ImportError:
+	import http.cookiejar
 import requests
-import cookielib
 import bs4
 import time
 import re
@@ -12,6 +15,12 @@ import datetime
 import ctypes
 from colorama import init, Fore, Back, Style
 init()
+
+def pause():
+	if sys.version_info.major == 2:
+		raw_input("Press Enter to continue...")
+	elif sys.version_info.major == 3:
+		input("Press Enter to continue...")
 
 os.chdir(os.path.abspath(os.path.dirname(sys.argv[0])))
 
@@ -30,18 +39,21 @@ try:
 	authData["sort"] = ""
 	authData["steamparental"] = ""
 	authData["hasPlayTime"] = "false"
-	execfile("./settings.py", authData)
+	if sys.version_info.major == 2:
+		execfile("./settings.py", authData)
+	elif sys.version_info.major == 3:
+		exec(compile(open("./settings.py").read(), "./settings.py", 'exec'),authData)
 	myProfileURL = "https://steamcommunity.com/id/" + authData["steamId"]
 except:
 	logging.warning(Fore.RED + "Error loading config file" + Fore.RESET)
-	raw_input("Press Enter to continue...")
+	pause()
 	sys.exit()
 
 mandatoryData = ["sessionid", "steamRememberLogin", "steamLoginSecure"]
 for item in mandatoryData:
 	if not authData[item]:
 		logging.warning(Fore.RED + "No " + item + " set" + Fore.RESET)
-		raw_input("Press Enter to continue...")
+		pause()
 		sys.exit()
 
 def generateCookies():
@@ -55,7 +67,7 @@ def generateCookies():
 		)
 	except:
 		logging.warning(Fore.RED + "Error setting cookies" + Fore.RESET)
-		raw_input("Press Enter to continue...")
+		pause()
 		sys.exit()
 
 	return cookies
@@ -83,7 +95,7 @@ def idleOpen(appID):
 			process_idle = subprocess.Popen(["python2", "steam-idle.py", str(appID)])
 	except:
 		logging.warning(Fore.RED + "Error launching steam-idle with game ID " + str(appID) + Fore.RESET)
-		raw_input("Press Enter to continue...")
+		pause()
 		sys.exit()
 
 def idleClose(appID):
@@ -94,7 +106,7 @@ def idleClose(appID):
 		logging.warning(getAppName(appID) + " took " + Fore.GREEN + str(datetime.timedelta(seconds=total_time)) + Fore.RESET + " to idle.")
 	except:
 		logging.warning(Fore.RED + "Error closing game. Exiting." + Fore.RESET)
-		raw_input("Press Enter to continue...")
+		pause()
 		sys.exit()
 
 def chillOut(appID):
@@ -137,7 +149,7 @@ def get_blacklist():
 			lines = f.readlines()
 		blacklist = [int(n.strip()) for n in lines]
 	except:
-		blacklist = [];
+		blacklist = []
 
 	if not blacklist:
 		logging.warning("No games have been blacklisted")
@@ -151,7 +163,7 @@ try:
 	r = requests.get(myProfileURL+"/badges/",cookies=cookies)
 except:
 	logging.warning(Fore.RED + "Error reading badge page" + Fore.RESET)
-	raw_input("Press Enter to continue...")
+	pause()
 	sys.exit()
 
 try:
@@ -160,7 +172,7 @@ try:
 	badgeSet = badgePageData.find_all("div",{"class": "badge_title_stats"})
 except:
 	logging.warning(Fore.RED + "Error finding drop info" + Fore.RESET)
-	raw_input("Press Enter to continue...")
+	pause()
 	sys.exit()
 
 # For profiles with multiple pages
@@ -180,7 +192,7 @@ except:
 userinfo = badgePageData.find("a",{"class": "user_avatar"})
 if not userinfo:
 	logging.warning(Fore.RED + "Invalid cookie data, cannot log in to Steam" + Fore.RESET)
-	raw_input("Press Enter to continue...")
+	pause()
 	sys.exit()
 
 blacklist = get_blacklist()
@@ -193,7 +205,7 @@ for badge in badgeSet:
 	try:
 		badge_text = badge.get_text()
 		dropCount = badge.find_all("span",{"class": "progress_info_bold"})[0].contents[0]
-		has_playtime = re.search("[0-9\.] hrs on record", badge_text) != None
+		has_playtime = re.search(r"[\d.]+ hrs on record", badge_text) != None
 
 		if "No card drops" in dropCount or (has_playtime == False and authData["hasPlayTime"].lower() == "true") :
 			continue
@@ -238,7 +250,7 @@ if authData["sort"] in sortValues:
 		games = sorted(badgesLeft, key=getKey, reverse=False)
 else:
 	logging.warning(Fore.RED + "Invalid sort value" + Fore.RESET)
-	raw_input("Press Enter to continue...")
+	pause()
 	sys.exit()
 
 for appID, drops, value in games:
@@ -290,4 +302,4 @@ for appID, drops, value in games:
 	logging.warning(Fore.GREEN + "Successfully completed idling cards for " + getAppName(appID) + Fore.RESET)
 
 logging.warning(Fore.GREEN + "Successfully completed idling process" + Fore.RESET)
-raw_input("Press Enter to continue...")
+pause()
